@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinkedIn 光伏客户投放分析仪表盘 · 完整版</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;padding:24px}
+h1{font-size:20px;font-weight:600;margin-bottom:2px}
+.subtitle{font-size:12px;color:#888;margin-bottom:20px}
+.tabs{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:7px 16px;font-size:12px;border:1px solid #ddd;border-radius:20px;cursor:pointer;background:#fff;color:#555;transition:all .15s}
+.tab.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.panel{display:none}.panel.active{display:block}
+.metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.mc{background:#fff;border:1px solid #eee;border-radius:10px;padding:12px 14px}
+.ml{font-size:11px;color:#999;margin:0 0 2px}.mv{font-size:22px;font-weight:600;margin:0}.mb{font-size:11px;margin:2px 0 0}
+.good{color:#1D9E75}.warn{color:#BA7517}.bad{color:#E24B4A}
+.cw{position:relative;width:100%;background:#fff;border:1px solid #eee;border-radius:10px;padding:16px;margin-bottom:16px}
+.sec{font-size:11px;font-weight:600;color:#999;letter-spacing:.06em;text-transform:uppercase;margin:20px 0 10px}
+.note{font-size:11px;color:#aaa;margin-top:6px;margin-bottom:4px}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tag{font-size:11px;padding:3px 10px;border-radius:12px;border:1px solid}
+.tag-r{color:#A32D2D;border-color:#F09595;background:#FCEBEB}
+.tag-g{color:#0F6E56;border-color:#9FE1CB;background:#E1F5EE}
+.tag-b{color:#185FA5;border-color:#B5D4F4;background:#E6F1FB}
+.tag-a{color:#854F0B;border-color:#FAC775;background:#FAEEDA}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#666}
+.ldot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.divsep{border:none;border-top:2px solid #eee;margin:24px 0 16px;padding-top:16px}
+/* Insight cards */
+.insight-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px}
+.ins-card{background:#fff;border:1px solid #eee;border-radius:12px;padding:16px 18px}
+.ins-card.priority-1{border-left:4px solid #1D9E75}
+.ins-card.priority-2{border-left:4px solid #BA7517}
+.ins-card.priority-3{border-left:4px solid #E24B4A}
+.ins-card.priority-info{border-left:4px solid #378ADD}
+.ins-title{font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500}
+.badge-g{background:#E1F5EE;color:#0F6E56}
+.badge-a{background:#FAEEDA;color:#854F0B}
+.badge-r{background:#FCEBEB;color:#A32D2D}
+.badge-b{background:#E6F1FB;color:#185FA5}
+.ins-body{font-size:12px;color:#555;line-height:1.7}
+.ins-body li{margin-bottom:4px;padding-left:4px}
+.ins-body ul{list-style:none;padding:0}
+.ins-body ul li::before{content:"→ ";color:#888}
+.data-point{font-weight:600;color:#1a1a1a}
+.kpi-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.kpi-table th{background:#f5f5f3;padding:8px 10px;text-align:left;font-weight:500;font-size:11px;color:#666;border-bottom:1px solid #eee}
+.kpi-table td{padding:8px 10px;border-bottom:1px solid #f0f0ee;vertical-align:top}
+.kpi-table tr:last-child td{border-bottom:none}
+.up{color:#1D9E75;font-weight:600}.down{color:#E24B4A;font-weight:600}.hold{color:#BA7517;font-weight:600}
+.action-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:12px 0}
+.action-col{background:#fff;border:1px solid #eee;border-radius:10px;padding:14px}
+.action-col h4{font-size:12px;font-weight:600;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f0f0ee}
+.action-col.short h4{color:#1D9E75}
+.action-col.mid h4{color:#BA7517}
+.action-col.lng h4{color:#378ADD}
+.action-col ul{list-style:none;padding:0;font-size:11px;color:#555}
+.action-col ul li{padding:4px 0;border-bottom:1px solid #f8f8f6;line-height:1.5}
+.action-col ul li:last-child{border:none}
+.action-col ul li::before{content:"• ";color:#bbb}
+@media(max-width:680px){
+  .insight-grid{grid-template-columns:1fr}
+  .action-row{grid-template-columns:1fr}
+  .metric-row{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<h1>LinkedIn 光伏客户广告投放分析仪表盘</h1>
+<p class="subtitle">数据维度：总体 · 市场 · 素材类型（含Video&DA专项）· 受众 · Pillar </p>
+
+<div class="tabs">
+  <button class="tab active" onclick="show('overview',this)">总体 Overview</button>
+  <button class="tab" onclick="show('market',this)">市场 Market</button>
+  <button class="tab" onclick="show('media',this)">素材类型 × 市场</button>
+  <button class="tab" onclick="show('audience',this)">受众 × 市场</button>
+  <button class="tab" onclick="show('pillar',this)">Pillar × 市场</button>
+  <button class="tab" onclick="show('insights',this)">优化建议</button>
+</div>
+
+<!-- ═══ OVERVIEW ═══ -->
+<div id="overview" class="panel active">
+  <div class="metric-row">
+    <div class="mc"><p class="ml">CTR 广义点击率</p><p class="mv good">1.30%</p><p class="mb good">行业均值 0.49% ↑ 165%</p></div>
+    <div class="mc"><p class="ml">CTR 落地页点击</p><p class="mv warn">0.11%</p><p class="mb warn">低于行业均值 0.49%</p></div>
+    <div class="mc"><p class="ml">CPC 每次点击成本</p><p class="mv good">$3.60</p><p class="mb good">全球均值 $5.60 ↓ 36%</p></div>
+    <div class="mc"><p class="ml">CPL 每粉丝成本</p><p class="mv good">$51.01</p><p class="mb good">行业均值 $100 ↓ 49%</p></div>
+    <div class="mc"><p class="ml">CVR 转化率</p><p class="mv good">7.06%</p><p class="mb good">全球均值 5–15% ✓ 达标</p></div>
+    <div class="mc"><p class="ml">Engagement Rate</p><p class="mv good">1.45%</p><p class="mb good">Manufacturing 均值 1.4% ↑</p></div>
+  </div>
+  <div class="tags">
+    <span class="tag tag-g">CTR广义 1.30% vs 行业 0.49%</span>
+    <span class="tag tag-r">CTR落地页 0.11% 低于均值</span>
+    <span class="tag tag-g">CPL $51 vs 行业 $100</span>
+    <span class="tag tag-g">CPC $3.60 vs 全球 $5.60</span>
+    <span class="tag tag-b">CVR 7.06% ∈ [5%, 15%]</span>
+    <span class="tag tag-a">ER 1.45% vs Manufacturing 1.4%</span>
+  </div>
+  <p class="sec">9市场综合 — 消耗 · 粉丝(÷10) · CPL · CTR · ER · CVR</p>
+  <div class="tags">
+    <span class="tag tag-b">CVR全球均值区间 5–15%（橙色虚线）</span>
+    <span class="tag tag-a">Manufacturing ER均值 1.4%（橙色虚线）</span>
+  </div>
+  <div class="cw" style="height:360px">
+    <div class="legend">
+      <span class="leg"><span class="ldot" style="background:#B5D4F4"></span>消耗($)</span>
+      <span class="leg"><span class="ldot" style="background:#1D9E75"></span>CPL($)</span>
+      <span class="leg"><span class="ldot" style="background:#F0997B"></span>粉丝÷10</span>
+      <span class="leg"><span class="ldot" style="background:#378ADD"></span>CTR%</span>
+      <span class="leg"><span class="ldot" style="background:#7F77DD"></span>ER%</span>
+      <span class="leg"><span class="ldot" style="background:#EF9F27"></span>CVR%</span>
+    </div>
+    <canvas id="c0"></canvas>
+  </div>
+  <p class="note">左轴：消耗($) / CPL($) | 右轴：粉丝(÷10) / CTR% / ER% / CVR%</p>
+</div>
+
+<!-- ═══ MARKET ═══ -->
+<div id="market" class="panel">
+  <p class="sec">各市场 CPL vs 行业基准 $100（绿=达标 橙=偏高 红=超标）</p>
+  <div class="cw" style="height:260px"><canvas id="c1"></canvas></div>
+  <p class="sec">各市场 CTR% · ER% — 参考线：Manufacturing ER均值 1.4%</p>
+  <div class="cw" style="height:230px"><canvas id="c2"></canvas></div>
+  <p class="sec">各市场 CVR% — 参考区间：5%–15%（全球均值）</p>
+  <div class="cw" style="height:230px"><canvas id="c3"></canvas></div>
+  <p class="sec">各市场新增粉丝 vs 总消耗</p>
+  <div class="cw" style="height:240px"><canvas id="c3b"></canvas></div>
+</div>
+
+<!-- ═══ MEDIA × MARKET ═══ -->
+<div id="media" class="panel">
+  <p class="sec">各市场素材类型 — CPL ($)</p>
+  <div class="cw" style="height:320px"><canvas id="c4"></canvas></div>
+  <p class="sec">各市场素材类型 — CTR (%)</p>
+  <div class="cw" style="height:320px"><canvas id="c5"></canvas></div>
+  <p class="sec">各市场素材类型 — 互动率 ER (%) — 参考线 Manufacturing 1.4%</p>
+  <div class="cw" style="height:320px"><canvas id="c6"></canvas></div>
+  <p class="sec">各市场素材类型 — CVR (%)</p>
+  <div class="cw" style="height:320px"><canvas id="c6b"></canvas></div>
+
+  <div class="divsep">
+    <p style="font-size:14px;font-weight:600;margin-bottom:4px">VIDEO 专项分析</p>
+    <p style="font-size:11px;color:#999">Australia 无视频投放数据</p>
+  </div>
+  <div class="tags">
+    <span class="tag tag-b">LinkedIn视频播放率参考区间 25–35%</span>
+    <span class="tag tag-a">完播率行业参考 10–15%</span>
+    <span class="tag tag-g">绿色=达标 橙色=偏低 红色=不达标</span>
+  </div>
+  <p class="sec">Video — 各市场播放率 Video View Rate (%)</p>
+  <div class="cw" style="height:260px"><canvas id="cvid1"></canvas></div>
+  <p class="sec">Video — 各市场完播率 Video Completion Rate (%)</p>
+  <div class="cw" style="height:260px"><canvas id="cvid2"></canvas></div>
+  <p class="sec">Video — 各市场 CPL(柱·左轴) vs CTR / ER / CVR(折线·右轴)</p>
+  <div class="cw" style="height:300px">
+    <div class="legend">
+      <span class="leg"><span class="ldot" style="background:#9FE1CB"></span>CPL($) 左轴</span>
+      <span class="leg"><span class="ldot" style="background:#378ADD"></span>CTR%</span>
+      <span class="leg"><span class="ldot" style="background:#7F77DD"></span>ER%</span>
+      <span class="leg"><span class="ldot" style="background:#EF9F27"></span>CVR%</span>
+    </div>
+    <canvas id="cvid3"></canvas>
+  </div>
+
+  <div class="divsep">
+    <p style="font-size:14px;font-weight:600;margin-bottom:4px">DA 动态广告专项分析</p>
+    <p style="font-size:11px;color:#999">Follow Rate = 新增粉丝 / 总点击 | DA Follower Ad CTR行业参考 0.02–0.05% | Follow Rate参考基准 50%</p>
+  </div>
+  <div class="tags">
+    <span class="tag tag-g">LATAM Follow Rate 70.9% 最高</span>
+    <span class="tag tag-g">Africa 67.7% / MENA 63.0%</span>
+    <span class="tag tag-r">EU 42.9% / NAMER 40.4% 偏低</span>
+  </div>
+  <p class="sec">DA — 各市场 Follow Rate (%) — 参考基准 50%</p>
+  <div class="cw" style="height:260px"><canvas id="cda1"></canvas></div>
+  <p class="sec">DA — 各市场 CPL($)(柱·左轴) vs Follow Rate(%)(折线·右轴)</p>
+  <div class="cw" style="height:280px">
+    <div class="legend">
+      <span class="leg"><span class="ldot" style="background:#AFA9EC"></span>CPL($) 左轴</span>
+      <span class="leg"><span class="ldot" style="background:#1D9E75"></span>Follow Rate% 右轴</span>
+    </div>
+    <canvas id="cda2"></canvas>
+  </div>
+</div>
+
+<!-- ═══ AUDIENCE × MARKET ═══ -->
+<div id="audience" class="panel">
+  <div class="tags">
+    <span class="tag tag-b">核心指标：CPL · Follows · CVR · ER</span>
+  </div>
+  <p class="sec">① CPL ($) — 涨粉效率，越低越好 — 参考行业基准 $100</p>
+  <div class="cw" style="height:340px"><canvas id="c7"></canvas></div>
+  <p class="sec">② 新增粉丝(柱·左轴) + CVR%(折线·右轴) — 规模与转化质量双轴</p>
+  <div class="cw" style="height:380px">
+    <div class="legend">
+      <span class="leg"><span class="ldot" style="background:#B5D4F4"></span>Agency</span>
+      <span class="leg"><span class="ldot" style="background:#378ADD"></span>Direct Client</span>
+      <span class="leg"><span class="ldot" style="background:#F5C4B3"></span>Promotion</span>
+      <span class="leg"><span class="ldot" style="background:#EF9F27"></span>ToC</span>
+      <span class="leg"><span class="ldot" style="background:#1D9E75"></span>Power Pro</span>
+      <span class="leg" style="margin-left:8px;font-size:11px;color:#888">折线 = 各受众CVR%（右轴）</span>
+    </div>
+    <canvas id="c8fc"></canvas>
+  </div>
+  <p class="note">柱=新增粉丝（左轴）· 折线=CVR%（右轴）· 灰色虚线=CVR全球均值区间 5–15%</p>
+  <p class="sec">③ 互动率 ER (%) — 参考线：Manufacturing 均值 1.4%</p>
+  <div class="cw" style="height:340px"><canvas id="c8"></canvas></div>
+</div>
+
+<!-- ═══ PILLAR × MARKET ═══ -->
+<div id="pillar" class="panel">
+  <div class="tags">
+    <span class="tag tag-b">核心指标：CPL · Follows · CVR · ER</span>
+  </div>
+  <p class="sec">① CPL ($) — 参考行业基准 $100</p>
+  <div class="cw" style="height:360px"><canvas id="c9"></canvas></div>
+  <p class="sec">② 新增粉丝(柱·左轴) + CVR%(折线·右轴) — 规模与转化质量双轴</p>
+  <div class="cw" style="height:400px">
+    <div class="legend">
+      <span class="leg"><span class="ldot" style="background:#378ADD"></span>2024 EGM</span>
+      <span class="leg"><span class="ldot" style="background:#1D9E75"></span>Adhoc</span>
+      <span class="leg"><span class="ldot" style="background:#EF9F27"></span>Cust.Eng</span>
+      <span class="leg"><span class="ldot" style="background:#F0997B"></span>Longtermism</span>
+      <span class="leg"><span class="ldot" style="background:#7F77DD"></span>Tech-Lead</span>
+      <span class="leg"><span class="ldot" style="background:#5DCAA5"></span>ToC</span>
+      <span class="leg" style="margin-left:8px;font-size:11px;color:#888">折线 = 各Pillar CVR%（右轴）</span>
+    </div>
+    <canvas id="c11fc"></canvas>
+  </div>
+  <p class="note">柱=新增粉丝（左轴）· 折线=CVR%（右轴）· 灰色虚线=CVR全球均值区间 5–15%</p>
+  <p class="sec">③ 互动率 ER (%) — 参考线：Manufacturing 均值 1.4%</p>
+  <div class="cw" style="height:360px"><canvas id="c10"></canvas></div>
+</div>
+
+<!-- ═══ INSIGHTS ═══ -->
+<div id="insights" class="panel">
+
+  <p class="sec">核心结论</p>
+
+  <div class="ins-card priority-info" style="margin-bottom:12px">
+    <p class="ins-title" style="font-size:14px">结论一：整体目标达成，效率优于行业，但转化链路存在断点 <span class="badge badge-g">总体达标</span></p>
+    <div class="ins-body" style="font-size:13px;line-height:1.9">
+      <p style="margin-bottom:8px">本次投放的核心目标是<strong>提升互动率</strong>与<strong>获取主页粉丝</strong>，整体执行层面均已达成。<span class="data-point">CPL $51.01，低于行业均值 $100 达 49%</span>；CTR 广义点击率 1.30%，是 Manufacturing 行业均值的 2.6 倍；CPC $3.60 低于全球均值 36%；CVR 7.06% 和 ER 1.45% 均在正常区间或微超行业标准。</p>
+      <p>然而数据中存在一个核心断点：<span class="data-point">落地页 CTR 仅 0.11%，远低于行业均值 0.49%</span>。这意味着广告能吸引用户点击互动，但用户并未进一步跳转到落地页完成深层转化。<strong>广义点击≠有效转化，引导路径的优化是下一阶段最优先的系统性问题。</strong></p>
+    </div>
+  </div>
+
+  <div class="ins-card priority-info" style="margin-bottom:12px">
+    <p class="ins-title" style="font-size:14px">结论二：市场之间效率分化显著，预算结构需要重新配置 <span class="badge badge-a">结构性机会</span></p>
+    <div class="ins-body" style="font-size:13px;line-height:1.9">
+      <p style="margin-bottom:8px">9个市场的投放效率存在极大差异，当前预算分配与市场回报并不匹配。<span class="data-point">SEA 消耗最高（$291K），却不是粉丝贡献最多的市场；LATAM 消耗第二，粉丝数却是全场第一（6,957）；NAMER 消耗 $175K，CPL 却高达 $119.6，超行业基准 20%。</span></p>
+      <p>从性价比角度，<strong>MENA（CPL $38.9）、India（CPL $29.6）、LATAM（CPL $37.4）</strong>是应该加大投入的高效市场；SEA 需要先优化落地页再扩量；EU 和 NAMER 需要控制预算并优化素材质量；AU 性价比最差（CPL $170.8），建议更换广告形式。<strong>下一阶段应将预算从低效市场向高效市场有序转移。</strong></p>
+    </div>
+  </div>
+
+  <div class="ins-card priority-info" style="margin-bottom:12px">
+    <p class="ins-title" style="font-size:14px">结论三：素材类型与受众选择是 CPL 差异的核心驱动因素 <span class="badge badge-a">结构性优化</span></p>
+    <div class="ins-body" style="font-size:13px;line-height:1.9">
+      <p style="margin-bottom:8px">四种素材类型各有明确定位：<strong>IMG</strong> 是粉丝增长主力但落地页转化偏弱；<strong>DOC</strong> 互动率最高（India ER 13.75%）但不适合直接转化，适合与 DA 搭配形成漏斗；<strong>DA</strong> 的 Follow Rate 和 CVR 最佳（LATAM 高达 71%），但 CTR 极低（≤0.12%），素材文案亟需从企业视角转向用户视角；<strong>Video</strong> 在 India 存在"内容质量高、封面吸引力不足"的矛盾——完播率达标但播放率偏低，修改封面是性价比最高的优化动作。</p>
+      <p>受众层面，<span class="data-point">ToC 互动率全场最高（ER 3.48%，CTR 2.87%），Power Professional 转化率全场最高（CVR 8.39%，LATAM 高达 45.5%）</span>，两类受众是下阶段预算增长的优先方向。Agency Partners 整体性价比偏低，但 <strong>India 是例外</strong>——其 Agency CPL 仅 $41、ER 3.01%，应维持而非缩减，这体现了市场级别差异不可一刀切的分析原则。</p>
+    </div>
+  </div>
+
+  <div class="ins-card priority-info" style="margin-bottom:20px">
+    <p class="ins-title" style="font-size:14px">结论四：内容方向（Pillar）与市场的匹配度决定转化效率 <span class="badge badge-b">内容策略</span></p>
+    <div class="ins-body" style="font-size:13px;line-height:1.9">
+      <p style="margin-bottom:8px"><strong>ToC 和 Adhoc</strong> 是性价比最高的两个内容方向（CPL 分别为 $37.5 和 $42.1），前者在 MENA 的 CPL 低至 $16.2（全场最低），后者在 SEA 的 ER 高达 5.29%（该市场最高）。这两类内容在各市场应优先增加。</p>
+      <p style="margin-bottom:8px"><strong>Longtermism & Sustainability</strong> 在多数市场表现偏弱，但不能简单缩减——India（CPL $39.2）和 Africa（CPL $66.2）均低于行业均值，应优先优化素材而非削减预算；SEA（CPL $129.6）和 NAMER（CPL $225.8）才是真正需要缩减的市场。<strong>这一发现说明：同一内容方向在不同市场可以呈现截然相反的结论，分析粒度必须到市场×Pillar的交叉层面。</strong></p>
+      <p>所有内容方向共同的快速优化动作是：<span class="data-point">在 EGM / CE / Tech-Leading / Adhoc 内容文末统一加入 LinkedIn 主页链接</span>，直接打通从互动到关注的转化路径，这是成本最低、收益最直接的改进。</p>
+    </div>
+  </div>
+
+  <p class="sec">市场优先级建议</p>
+  <table class="kpi-table">
+    <tr><th>市场</th><th>CPL</th><th>优先级</th><th>核心问题</th><th>建议操作</th></tr>
+    <tr><td><strong>MENA</strong></td><td class="up">$38.9</td><td><span class="up">↑ 加大</span></td><td>消耗少、性价比最高</td><td>扩大img/video预算，增加ToC内容</td></tr>
+    <tr><td><strong>India</strong></td><td class="up">$29.6</td><td><span class="up">↑ 加大</span></td><td>CPL最低、潜力最大</td><td>扩大素材覆盖面，增加Power Pro消耗</td></tr>
+    <tr><td><strong>LATAM</strong></td><td class="up">$37.4</td><td><span class="up">↑ 优化后扩大</span></td><td>CVR高但互动率偏低</td><td>优化img素材吸引力，增加Adhoc消耗</td></tr>
+    <tr><td><strong>Africa</strong></td><td>$64.8</td><td><span class="hold">→ 维持</span></td><td>各项稳定健康</td><td>增加ToC/Adhoc，维持整体结构</td></tr>
+    <tr><td><strong>Global</strong></td><td>$61.2</td><td><span class="hold">→ 维持</span></td><td>体量小，CVR偏低</td><td>部分内容细分市场单独投放</td></tr>
+    <tr><td><strong>SEA</strong></td><td>$69.2</td><td><span class="hold">→ 优化</span></td><td>消耗最高但转化率低</td><td>优化落地页转化链路，减少DA</td></tr>
+    <tr><td><strong>EU</strong></td><td>$76.7</td><td><span class="down">↓ 控制</span></td><td>消耗多，互动弱</td><td>控制预算，优化素材，增加Doc占比</td></tr>
+    <tr><td><strong>NAMER</strong></td><td class="down">$119.6</td><td><span class="down">↓ 控制</span></td><td>CPL最高，CTR最低</td><td>减少Video，优化素材定向，增加ToC</td></tr>
+    <tr><td><strong>AU</strong></td><td class="down">$170.8</td><td><span class="down">↓ 缩减</span></td><td>CPL最高，仅img</td><td>切换为Video/Doc形式测试</td></tr>
+  </table>
+
+  <p class="sec">素材类型优化建议</p>
+  <div class="insight-grid">
+    <div class="ins-card priority-1">
+      <p class="ins-title">IMG 图片 <span class="badge badge-g">主力素材</span></p>
+      <div class="ins-body">
+        <ul>
+          <li>粉丝增长贡献最多，CTR表现好</li>
+          <li>落地页转化率偏低（美洲地区除外）</li>
+          <li><span class="data-point">建议：</span>MENA/India增加预算；优化CTA引导设计；LATAM优化内容吸引力；NAMER优化用户精准匹配</li>
+        </ul>
+      </div>
+    </div>
+    <div class="ins-card priority-1">
+      <p class="ins-title">DOC 文档 <span class="badge badge-g">互动利器</span></p>
+      <div class="ins-body">
+        <ul>
+          <li>互动率ER各市场最高，India达13.75%</li>
+          <li>不适合直接转化，CVR普遍偏低</li>
+          <li><span class="data-point">建议：</span>EU/NAMER增加Doc预算提升ER；India/Africa增加预算；定位品牌认知和互动阶段，配合DA完成转化</li>
+        </ul>
+      </div>
+    </div>
+    <div class="ins-card priority-2">
+      <p class="ins-title">DA 动态广告 <span class="badge badge-a">转化专项</span></p>
+      <div class="ins-body">
+        <ul>
+          <li>CVR最佳（40–71%），Follow Rate高，是高质量粉丝来源</li>
+          <li>CTR极低（≤0.12%），说明素材吸引力不足</li>
+          <li><span class="data-point">注意：</span>DA Follower Ad 用户头像为系统自动抓取，不可替换为品牌图</li>
+          <li><span class="data-point">建议：</span>文案改用户视角（"Join the clean future"）；确保Logo清晰；EU/NAMER减少DA；SEA减少DA</li>
+        </ul>
+      </div>
+    </div>
+    <div class="ins-card priority-2">
+      <p class="ins-title">VIDEO 视频 <span class="badge badge-a">潜力优化</span></p>
+      <div class="ins-body">
+        <ul>
+          <li>播放率MENA/LATAM低于参考下限25%（需优化封面）</li>
+          <li>完播率EU/India/LATAM低于10%（需优化内容节奏）</li>
+          <li>India视频内容质量高（完播率好），封面吸引力不足（播放率低）</li>
+          <li><span class="data-point">建议：</span>修改India视频封面；MENA增加视频预算；减少Global/NAMER video消耗</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p class="sec">受众优化建议</p>
+  <div class="insight-grid">
+    <div class="ins-card priority-1">
+      <p class="ins-title">ToC Persona <span class="badge badge-g">↑ 优先增加</span></p>
+      <div class="ins-body"><ul>
+        <li>CTR 2.87%、ER 3.48%全场最高</li>
+        <li>CPC/CPL最低，性价比最佳</li>
+        <li>各市场均应优先增加ToC消耗</li>
+        <li>NAMER建议增加IMG/Doc广告形式扩大覆盖</li>
+      </ul></div>
+    </div>
+    <div class="ins-card priority-1">
+      <p class="ins-title">Power Professional <span class="badge badge-g">↑ 重点提升</span></p>
+      <div class="ins-body"><ul>
+        <li>CVR 8.39%全场最高，性价比突出</li>
+        <li>LATAM CVR高达45.5%，India CVR 29%</li>
+        <li>MENA贡献粉丝1,572（该市场最高）</li>
+        <li>重点提升MENA/India/LATAM的Power Pro预算</li>
+      </ul></div>
+    </div>
+    <div class="ins-card priority-2">
+      <p class="ins-title">Direct Client <span class="badge badge-a">→ 维持+优化</span></p>
+      <div class="ins-body"><ul>
+        <li>粉丝总量最多（9,891），是规模主力</li>
+        <li>互动率普遍偏低，ER仅1.23%</li>
+        <li>建议增加Doc广告形式提升互动率</li>
+        <li>NAMER/EU减少DA投放（CPL过高）</li>
+      </ul></div>
+    </div>
+    <div class="ins-card priority-3">
+      <p class="ins-title">Agency Partners <span class="badge badge-r">↓ 多数市场减少</span></p>
+      <div class="ins-body"><ul>
+        <li>整体CPL $68.7，性价比偏低</li>
+        <li><span class="data-point">例外：India Agency CPL $41，ER 3.01%，应维持</span></li>
+        <li>LATAM减少Video/Doc；EU减少DA/Video</li>
+        <li>预算转移至Power Pro和ToC</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <p class="sec">Pillar内容优化建议</p>
+  <table class="kpi-table">
+    <tr><th>Pillar</th><th>整体CPL</th><th>整体ER</th><th>建议</th><th>市场差异说明</th></tr>
+    <tr><td><strong>ToC Persona</strong></td><td class="up">$37.5</td><td class="up">4.06%</td><td><span class="up">↑ 优先增加</span></td><td>MENA CPL仅$16.2（全场最低）；India ER 8.75%（全场最高）</td></tr>
+    <tr><td><strong>Adhoc</strong></td><td class="up">$42.1</td><td class="up">3.18%</td><td><span class="up">↑ 增加</span></td><td>SEA Adhoc ER 5.29%最高；EU维持（CPL达标）；AU减少（Follow Rate低）</td></tr>
+    <tr><td><strong>Customer Engagement</strong></td><td>$52.4</td><td>2.50%</td><td><span class="hold">→ 维持+优化</span></td><td>India/Africa表现好；SEA消耗大CPL高（$82.8）需精准定向</td></tr>
+    <tr><td><strong>2024 EGM</strong></td><td>$56.6</td><td>2.67%</td><td><span class="hold">→ 维持</span></td><td>SEA效果最好（粉丝1,387）；MENA完善转化链路；NAMER出价高需优化</td></tr>
+    <tr><td><strong>Technology-Leading</strong></td><td>$67.4</td><td>3.04%</td><td><span class="hold">→ 维持+优化CVR</span></td><td>SEA CPL $150.5需缩减；NAMER CPL $195.5需缩减；India/MENA/Africa维持</td></tr>
+    <tr><td><strong>Longtermism</strong></td><td>$65.8</td><td>2.30%</td><td><span class="down">↓ 多数市场缩减</span></td><td>India CPL $39.2、Africa CPL $66.2低于均值→不缩减，优化素材；SEA/NAMER缩减</td></tr>
+  </table>
+
+  <p class="sec">下一阶段投放建议（按执行周期）</p>
+  <div class="action-row">
+    <div class="action-col short">
+      <h4>短期 — 立即执行</h4>
+      <ul>
+        <li>MENA 加大预算（消耗少CPL低，立竿见影）</li>
+        <li>更新DA素材：文案改用户视角 + 强化Logo</li>
+        <li>增加ToC受众消耗（各市场通用）</li>
+        <li>EGM/CE/Tech/Adhoc内容文末加LinkedIn主页链接</li>
+        <li>India: Power Pro增加预算（CVR 29%，ROI极高）</li>
+      </ul>
+    </div>
+    <div class="action-col mid">
+      <h4>中期 — 1–2个月</h4>
+      <ul>
+        <li>SEA/India/LATAM：优化落地页转化路径</li>
+        <li>EU/NAMER：更新素材 + 精准受众定向</li>
+        <li>逐步调整受众结构：减少Agency，提升Power Pro占比</li>
+        <li>India Video：修改封面（内容好但封面吸引力不足）</li>
+        <li>EU/NAMER：减少DA/Video，增加Doc占比</li>
+      </ul>
+    </div>
+    <div class="action-col lng">
+      <h4>长期 — 持续优化</h4>
+      <ul>
+        <li>MENA/India：逐步提升Power Pro预算</li>
+        <li>Sustainability：不缩减，先优化CTR和互动率再扩量</li>
+        <li>AU：测试Video/Doc替代纯img投放</li>
+        <li>LATAM Power Pro：CVR 45.5%，数据验证后大幅扩量</li>
+        <li>Tech-Leading SEA/NAMER：逐步缩减，释放预算</li>
+      </ul>
+    </div>
+  </div>
+
+</div><!-- end insights -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+function show(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.dispatchEvent(new Event('resize'));
+}
+
+const mkts=['Africa','Australia','EU','Global','India','LATAM','MENA','NAMER','SEA'];
+const spend=[104558,4100,177996,7100,173278,260401,138570,175276,291492];
+const fols=[1614,24,2321,116,5857,6957,3563,1465,4211];
+const cpl=[64.8,170.8,76.7,61.2,29.6,37.4,38.9,119.6,69.2];
+const ctr=[2.00,1.44,1.32,3.56,1.70,0.66,3.07,0.20,2.77];
+const er=[2.22,1.44,1.40,3.60,1.84,0.73,3.31,0.21,3.50];
+const cvr=[6.67,5.74,6.02,3.77,5.49,14.51,5.86,12.14,5.51];
+
+// c0 Overview
+new Chart(document.getElementById('c0'),{type:'bar',data:{labels:mkts,datasets:[
+  {label:'消耗($)',data:spend,backgroundColor:'#B5D4F4',yAxisID:'y',order:4},
+  {label:'CPL($)',data:cpl,type:'line',borderColor:'#1D9E75',backgroundColor:'#1D9E75',pointRadius:4,yAxisID:'y',order:1,tension:0.3},
+  {label:'粉丝÷10',data:fols.map(v=>+(v/10).toFixed(1)),type:'line',borderColor:'#F0997B',backgroundColor:'#F0997B',pointRadius:4,yAxisID:'y2',order:2,tension:0.3,borderDash:[4,3]},
+  {label:'CTR%',data:ctr,type:'line',borderColor:'#378ADD',backgroundColor:'#378ADD',pointRadius:3,yAxisID:'y2',order:1,tension:0.3},
+  {label:'ER%',data:er,type:'line',borderColor:'#7F77DD',backgroundColor:'#7F77DD',pointRadius:3,yAxisID:'y2',order:1,tension:0.3,borderDash:[2,2]},
+  {label:'CVR%',data:cvr,type:'line',borderColor:'#EF9F27',backgroundColor:'#EF9F27',pointRadius:3,yAxisID:'y2',order:1,tension:0.3,borderDash:[5,2]}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+  scales:{y:{position:'left',title:{display:true,text:'消耗($)/CPL($)',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}},
+    y2:{position:'right',title:{display:true,text:'粉丝÷10/CTR/ER/CVR%',font:{size:10}},grid:{display:false}}}}});
+
+// c1 CPL
+new Chart(document.getElementById('c1'),{type:'bar',data:{labels:mkts,datasets:[
+  {label:'CPL ($)',data:cpl,backgroundColor:cpl.map(v=>v>100?'#F09595':v>70?'#FAC775':'#9FE1CB'),borderRadius:4},
+  {label:'行业基准 $100',data:Array(9).fill(100),type:'line',borderColor:'#E24B4A',borderDash:[6,3],pointRadius:0,borderWidth:2}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11},padding:10}}},
+  scales:{x:{ticks:{font:{size:11}},grid:{display:false}},y:{grid:{color:'rgba(0,0,0,0.05)'},title:{display:true,text:'CPL ($)',font:{size:10}}}}}});
+
+// c2 CTR ER
+new Chart(document.getElementById('c2'),{type:'bar',data:{labels:mkts,datasets:[
+  {label:'CTR%',data:ctr,backgroundColor:'#85B7EB',borderRadius:3},
+  {label:'ER%',data:er,backgroundColor:'#AFA9EC',borderRadius:3},
+  {label:'Manufacturing ER均值 1.4%',data:Array(9).fill(1.4),type:'line',borderColor:'#BA7517',borderDash:[5,4],pointRadius:0,borderWidth:2}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11},padding:10}}},
+  scales:{x:{ticks:{font:{size:11}},grid:{display:false}},y:{grid:{color:'rgba(0,0,0,0.05)'},title:{display:true,text:'%',font:{size:10}}}}}});
+
+// c3 CVR
+new Chart(document.getElementById('c3'),{type:'bar',data:{labels:mkts,datasets:[
+  {label:'CVR%',data:cvr,backgroundColor:cvr.map(v=>v<5?'#F09595':v>15?'#FAC775':'#9FE1CB'),borderRadius:4},
+  {label:'全球均值下限 5%',data:Array(9).fill(5),type:'line',borderColor:'#185FA5',borderDash:[4,4],pointRadius:0,borderWidth:1.5},
+  {label:'全球均值上限 15%',data:Array(9).fill(15),type:'line',borderColor:'#185FA5',borderDash:[4,4],pointRadius:0,borderWidth:1.5}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11},padding:10}}},
+  scales:{x:{ticks:{font:{size:11}},grid:{display:false}},y:{grid:{color:'rgba(0,0,0,0.05)'},title:{display:true,text:'CVR (%)',font:{size:10}}}}}});
+
+// c3b spend vs follows
+new Chart(document.getElementById('c3b'),{type:'bar',data:{labels:mkts,datasets:[
+  {label:'总消耗($)',data:spend,backgroundColor:'#B5D4F4',borderRadius:3,yAxisID:'y'},
+  {label:'新增粉丝',data:fols,backgroundColor:'#F5C4B3',borderRadius:3,yAxisID:'y2'}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11},padding:10}}},
+  scales:{y:{position:'left',title:{display:true,text:'消耗($)',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}},
+    y2:{position:'right',title:{display:true,text:'新增粉丝',font:{size:10}},grid:{display:false}}}}});
+
+// Media helpers
+const mediaLabels=['DA','doc','img','Video'];
+const mediaColors=['#7F77DD','#5DCAA5','#378ADD','#EF9F27'];
+const cplMedia={Africa:[70.2,75.9,62.7,66.8],Australia:[null,null,170.8,null],EU:[117.6,177.2,69.2,83.5],Global:[null,null,51.2,87.5],India:[17.4,49.3,35.1,34.2],LATAM:[27.1,79.4,43.2,43.8],MENA:[52.1,76.3,40.4,34.8],NAMER:[79.1,687.4,171.7,209.3],SEA:[84.4,232.5,60.8,76.5]};
+const ctrMedia={Africa:[0.20,3.84,1.99,1.88],Australia:[null,null,1.44,null],EU:[0.05,3.58,1.46,1.43],Global:[null,null,3.72,3.38],India:[0.08,6.23,4.64,4.25],LATAM:[0.10,3.28,1.24,1.28],MENA:[0.12,5.46,3.25,2.81],NAMER:[0.04,3.97,2.40,2.08],SEA:[0.05,4.80,3.00,2.78]};
+const erMedia={Africa:[0.20,7.86,2.00,2.02],Australia:[null,null,1.44,null],EU:[0.05,6.76,1.47,1.56],Global:[null,null,3.72,3.46],India:[0.08,13.75,4.64,4.34],LATAM:[0.10,5.77,1.25,1.38],MENA:[0.12,10.86,3.26,2.96],NAMER:[0.04,6.14,2.41,2.24],SEA:[0.05,9.10,3.51,3.74]};
+const cvrMedia={Africa:[67.7,3.1,7.2,6.4],Australia:[null,null,5.7,null],EU:[42.9,2.4,6.2,5.6],Global:[null,null,4.9,2.3],India:[57.6,2.8,3.7,4.1],LATAM:[71.0,2.5,10.9,9.5],MENA:[63.0,2.4,5.6,6.7],NAMER:[40.4,0.9,5.8,5.5],SEA:[50.6,1.8,5.6,5.6]};
+
+function makeGrouped(id,dataByMkt,ylabel,colors,labs,benchVal,benchLabel){
+  const ds=labs.map((m,i)=>({label:m,data:mkts.map(mk=>(dataByMkt[mk]||[])[i]??null),backgroundColor:colors[i],borderRadius:3,skipNull:true}));
+  if(benchVal!=null) ds.push({label:benchLabel,data:Array(mkts.length).fill(benchVal),type:'line',borderColor:'#E24B4A',borderDash:[5,4],pointRadius:0,borderWidth:1.5});
+  new Chart(document.getElementById(id),{type:'bar',data:{labels:mkts,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11},padding:8}}},
+      scales:{x:{ticks:{font:{size:10},maxRotation:30},grid:{display:false}},y:{title:{display:true,text:ylabel,font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}}}}});
+}
+makeGrouped('c4',cplMedia,'CPL ($)',mediaColors,mediaLabels,100,'行业基准 $100');
+makeGrouped('c5',ctrMedia,'CTR (%)',mediaColors,mediaLabels,null,null);
+makeGrouped('c6',erMedia,'ER (%)',mediaColors,mediaLabels,1.4,'Mfg ER 1.4%');
+makeGrouped('c6b',cvrMedia,'CVR (%)',mediaColors,mediaLabels,null,null);
+
+// Video
+const vidMkts=['Africa','EU','Global','India','LATAM','MENA','NAMER','SEA'];
+const vidViewRate=[33.41,25.59,25.95,29.18,24.42,23.96,31.69,30.79];
+const vidCompRate=[12.73,8.19,0.10,6.90,7.39,11.01,14.80,12.40];
+const vidCPL=[66.8,83.5,87.5,34.2,43.8,34.8,209.3,76.5];
+const vidCTR=[1.76,1.35,3.38,4.30,1.23,2.73,2.21,2.59];
+const vidER=[1.88,1.46,3.46,4.39,1.32,2.87,2.38,3.27];
+const vidCVR=[6.44,5.56,2.34,4.13,9.45,6.70,5.49,5.63];
+
+new Chart(document.getElementById('cvid1'),{type:'bar',data:{labels:vidMkts,datasets:[
+  {label:'Video View Rate %',data:vidViewRate,backgroundColor:vidViewRate.map(v=>v>=25?'#9FE1CB':'#FAC775'),borderRadius:4},
+  {label:'参考下限 25%',data:Array(vidMkts.length).fill(25),type:'line',borderColor:'#185FA5',borderDash:[5,4],pointRadius:0,borderWidth:1.5},
+  {label:'参考上限 35%',data:Array(vidMkts.length).fill(35),type:'line',borderColor:'#185FA5',borderDash:[5,4],pointRadius:0,borderWidth:1.5}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11},padding:10}}},
+  scales:{x:{ticks:{font:{size:11}},grid:{display:false}},y:{title:{display:true,text:'VVR (%)',font:{size:10}},min:0,max:45,grid:{color:'rgba(0,0,0,0.05)'}}}}});
+
+new Chart(document.getElementById('cvid2'),{type:'bar',data:{labels:vidMkts,datasets:[
+  {label:'完播率 Completion Rate %',data:vidCompRate,backgroundColor:vidCompRate.map(v=>v>=10?'#9FE1CB':v>=5?'#FAC775':'#F09595'),borderRadius:4},
+  {label:'行业参考下限 10%',data:Array(vidMkts.length).fill(10),type:'line',borderColor:'#BA7517',borderDash:[5,4],pointRadius:0,borderWidth:1.5},
+  {label:'行业参考上限 15%',data:Array(vidMkts.length).fill(15),type:'line',borderColor:'#BA7517',borderDash:[5,4],pointRadius:0,borderWidth:1.5}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11},padding:10}}},
+  scales:{x:{ticks:{font:{size:11}},grid:{display:false}},y:{title:{display:true,text:'完播率 (%)',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}}}}});
+
+new Chart(document.getElementById('cvid3'),{type:'bar',data:{labels:vidMkts,datasets:[
+  {label:'CPL ($)',data:vidCPL,backgroundColor:'#9FE1CB',yAxisID:'y',borderRadius:3},
+  {label:'CTR%',data:vidCTR,type:'line',borderColor:'#378ADD',backgroundColor:'#378ADD',pointRadius:4,yAxisID:'y2',tension:0.3},
+  {label:'ER%',data:vidER,type:'line',borderColor:'#7F77DD',backgroundColor:'#7F77DD',pointRadius:4,yAxisID:'y2',tension:0.3,borderDash:[3,2]},
+  {label:'CVR%',data:vidCVR,type:'line',borderColor:'#EF9F27',backgroundColor:'#EF9F27',pointRadius:4,yAxisID:'y2',tension:0.3,borderDash:[5,3]}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11},padding:10}}},
+  scales:{y:{position:'left',title:{display:true,text:'CPL ($)',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}},
+    y2:{position:'right',title:{display:true,text:'CTR/ER/CVR (%)',font:{size:10}},grid:{display:false}}}}});
+
+// DA
+const daMkts=['Africa','EU','India','LATAM','MENA','NAMER','SEA'];
+const daFollowRate=[67.74,42.94,57.61,70.99,62.96,40.39,50.59];
+const daCPL=[70.2,117.6,17.4,27.1,52.1,79.1,84.4];
+
+new Chart(document.getElementById('cda1'),{type:'bar',data:{labels:daMkts,datasets:[
+  {label:'DA Follow Rate %',data:daFollowRate,backgroundColor:daFollowRate.map(v=>v>=60?'#9FE1CB':v>=45?'#FAC775':'#F09595'),borderRadius:4},
+  {label:'参考基准 50%',data:Array(daMkts.length).fill(50),type:'line',borderColor:'#888',borderDash:[4,4],pointRadius:0,borderWidth:1.5}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11},padding:10}}},
+  scales:{x:{ticks:{font:{size:11}},grid:{display:false}},y:{title:{display:true,text:'Follow Rate (%)',font:{size:10}},min:0,max:90,grid:{color:'rgba(0,0,0,0.05)'}}}}});
+
+new Chart(document.getElementById('cda2'),{type:'bar',data:{labels:daMkts,datasets:[
+  {label:'CPL ($)',data:daCPL,backgroundColor:'#AFA9EC',yAxisID:'y',borderRadius:3},
+  {label:'Follow Rate %',data:daFollowRate,type:'line',borderColor:'#1D9E75',backgroundColor:'#1D9E75',pointRadius:5,yAxisID:'y2',tension:0.3}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11},padding:10}}},
+  scales:{y:{position:'left',title:{display:true,text:'CPL ($)',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}},
+    y2:{position:'right',title:{display:true,text:'Follow Rate (%)',font:{size:10}},min:0,max:90,grid:{display:false}}}}});
+
+// Audience
+const audLabels=['Agency','Direct Client','Power Pro','ToC'];
+const audColors=['#7F77DD','#378ADD','#1D9E75','#EF9F27'];
+const cplAud={Africa:[97.6,56.3,39.2,52.6],Australia:[null,null,170.8,null],EU:[78.4,82.2,72.7,53.7],Global:[null,null,61.2,null],India:[41.1,27.6,16.3,24.5],LATAM:[48.1,35.7,27.7,30.1],MENA:[85.0,35.9,35.4,17.2],NAMER:[134.7,120.3,87.1,118.8],SEA:[98.5,76.7,36.2,134.2]};
+const erAud={Africa:[2.64,1.93,2.06,2.51],Australia:[null,null,1.44,null],EU:[1.72,1.18,1.26,2.08],Global:[null,null,3.60,null],India:[3.01,1.95,0.16,8.23],LATAM:[1.02,0.80,0.16,2.02],MENA:[4.35,2.81,3.16,3.91],NAMER:[0.34,0.18,0.09,1.48],SEA:[3.02,2.82,4.47,4.28]};
+makeGrouped('c7',cplAud,'CPL ($)',audColors,audLabels,100,'行业基准 $100');
+makeGrouped('c8',erAud,'ER (%)',audColors,audLabels,1.4,'Mfg ER 1.4%');
+
+// Audience follows+CVR
+const folAud={Africa:[330,591,363,172,158],Australia:[null,null,null,null,24],EU:[879,840,null,197,405],Global:[null,null,null,null,116],India:[1709,2694,null,615,839],LATAM:[2186,2725,null,561,1485],MENA:[434,1030,null,527,1572],NAMER:[537,614,null,56,258],SEA:[1050,1397,null,173,1591]};
+const cvrAudByMkt={Africa:[5.60,6.68,7.09,7.36,7.86],Australia:[null,null,null,null,5.74],EU:[7.14,5.54,null,5.14,5.58],Global:[null,null,null,null,3.77],India:[3.66,5.91,null,5.33,28.98],LATAM:[12.53,12.59,null,10.03,45.47],MENA:[3.41,6.79,null,8.07,5.96],NAMER:[11.43,11.11,null,9.32,20.79],SEA:[4.94,6.37,null,6.11,5.25]};
+const audFolL=['Agency','Direct Client','Promotion','ToC','Power Pro'];
+const audFolC=['#B5D4F4','#378ADD','#F5C4B3','#EF9F27','#1D9E75'];
+const audCVRL=['#7F77DD','#185FA5','#D85A30','#BA7517','#0F6E56'];
+(function(){
+  const ds=audFolL.map((m,i)=>({label:m,data:mkts.map(mk=>(folAud[mk]||[])[i]??null),backgroundColor:audFolC[i],borderRadius:3,yAxisID:'y',skipNull:true,stack:'fol'}));
+  audFolL.forEach((m,i)=>ds.push({label:m+' CVR%',data:mkts.map(mk=>(cvrAudByMkt[mk]||[])[i]??null),type:'line',borderColor:audCVRL[i],backgroundColor:audCVRL[i],pointRadius:3,yAxisID:'y2',tension:0.3,borderWidth:1.5,skipNull:true}));
+  ds.push({label:'CVR 5%',data:Array(9).fill(5),type:'line',borderColor:'#bbb',borderDash:[4,3],pointRadius:0,yAxisID:'y2',borderWidth:1});
+  ds.push({label:'CVR 15%',data:Array(9).fill(15),type:'line',borderColor:'#bbb',borderDash:[4,3],pointRadius:0,yAxisID:'y2',borderWidth:1});
+  new Chart(document.getElementById('c8fc'),{type:'bar',data:{labels:mkts,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{size:10}},grid:{display:false}},y:{position:'left',stacked:true,title:{display:true,text:'新增粉丝',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}},y2:{position:'right',title:{display:true,text:'CVR (%)',font:{size:10}},min:0,max:50,grid:{display:false}}}}});
+})();
+
+// Pillar
+const pillarLabels=['EGM','Adhoc','Cust.Eng','Longterm','Tech-Lead','ToC'];
+const pillarColors=['#378ADD','#1D9E75','#EF9F27','#F0997B','#7F77DD','#5DCAA5'];
+const cplPillar={Africa:[65.4,39.2,64.0,66.2,77.4,52.2],Australia:[null,170.8,null,null,null,null],EU:[89.9,72.7,69.7,104.0,68.7,58.8],Global:[null,61.2,null,null,null,null],India:[null,32.5,33.9,39.2,38.8,24.0],LATAM:[43.0,35.7,38.1,48.1,55.2,29.6],MENA:[41.0,31.6,42.4,60.0,46.1,16.2],NAMER:[236.1,116.1,160.1,225.8,195.5,133.3],SEA:[41.0,33.3,82.8,129.6,150.5,128.9]};
+const erPillar={Africa:[2.53,2.06,1.88,1.66,2.89,2.59],Australia:[null,1.44,null,null,null,null],EU:[1.77,1.26,1.40,1.39,1.72,2.43],Global:[null,3.60,null,null,null,null],India:[null,4.03,4.41,3.95,6.03,8.75],LATAM:[1.39,1.47,1.22,1.07,1.91,2.17],MENA:[3.05,3.45,3.07,2.86,3.91,4.04],NAMER:[2.68,1.89,2.34,2.43,2.50,1.76],SEA:[4.49,5.29,2.87,2.29,2.55,5.50]};
+makeGrouped('c9',cplPillar,'CPL ($)',pillarColors,pillarLabels,100,'行业基准 $100');
+makeGrouped('c10',erPillar,'ER (%)',pillarColors,pillarLabels,1.4,'Mfg ER 1.4%');
+
+// Pillar follows+CVR
+const folPillar={Africa:[342,158,316,261,401,115],Australia:[null,24,null,null,null,null],EU:[370,405,446,176,752,102],Global:[null,116,null,null,null,null],India:[null,40,1266,933,1222,500],LATAM:[775,168,1092,643,1132,365],MENA:[563,975,582,314,724,371],NAMER:[142,56,108,56,143,27],SEA:[1387,1100,720,347,493,121]};
+const cvrPillarByMkt={Africa:[6.72,7.86,7.71,5.37,6.17,7.06],Australia:[null,5.74,null,null,null,null],EU:[4.92,5.58,7.09,4.83,6.51,4.81],Global:[null,3.77,null,null,null,null],India:[null,2.71,4.06,3.28,3.70,5.38],LATAM:[12.56,11.83,10.92,8.43,7.60,9.30],MENA:[6.80,5.40,6.10,4.49,5.44,8.13],NAMER:[4.17,7.87,6.78,4.46,5.81,8.23],SEA:[6.31,4.72,5.59,5.16,5.24,6.15]};
+const pFolC=['#378ADD','#1D9E75','#EF9F27','#F0997B','#7F77DD','#5DCAA5'];
+const pCVRL=['#185FA5','#0F6E56','#BA7517','#712B13','#534AB7','#085041'];
+(function(){
+  const ds=pillarLabels.map((m,i)=>({label:m,data:mkts.map(mk=>(folPillar[mk]||[])[i]??null),backgroundColor:pFolC[i],borderRadius:3,yAxisID:'y',skipNull:true,stack:'pfol'}));
+  pillarLabels.forEach((m,i)=>ds.push({label:m+' CVR%',data:mkts.map(mk=>(cvrPillarByMkt[mk]||[])[i]??null),type:'line',borderColor:pCVRL[i],backgroundColor:pCVRL[i],pointRadius:3,yAxisID:'y2',tension:0.3,borderWidth:1.5,skipNull:true}));
+  ds.push({label:'CVR 5%',data:Array(9).fill(5),type:'line',borderColor:'#bbb',borderDash:[4,3],pointRadius:0,yAxisID:'y2',borderWidth:1});
+  ds.push({label:'CVR 15%',data:Array(9).fill(15),type:'line',borderColor:'#bbb',borderDash:[4,3],pointRadius:0,yAxisID:'y2',borderWidth:1});
+  new Chart(document.getElementById('c11fc'),{type:'bar',data:{labels:mkts,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{size:10}},grid:{display:false}},y:{position:'left',stacked:true,title:{display:true,text:'新增粉丝',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}},y2:{position:'right',title:{display:true,text:'CVR (%)',font:{size:10}},min:0,max:20,grid:{display:false}}}}});
+})();
+</script>
+</body>
+</html>
